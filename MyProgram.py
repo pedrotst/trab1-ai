@@ -2,6 +2,9 @@ import statistics
 import math
 
 class bayesstats():
+	'''
+	Class to store the mean and standard deviation from classes yes and no
+	'''
 	mean_yes = None
 	mean_no = None
 	dev_yes = None
@@ -23,6 +26,9 @@ class bayesstats():
 		return self.__str__()
 
 def folding(training_set, fold_num):
+	'''
+	Separates the data set in a ten fold matter using a counter to know which fold is to be used as testing set (from 0 to 9)
+	'''
 	training_set_folded = []
 	test_folded = []
 	for i in range(len(training_set)):
@@ -33,6 +39,9 @@ def folding(training_set, fold_num):
 	return test_folded, training_set_folded
 
 def mean_dev(training_set):
+	'''
+	Calculates and returns the mean and standard deviation to the classes yes and no of a given training set
+	'''
 	class_yes = []
 	class_no = []
 	mean_yes = {}
@@ -58,16 +67,22 @@ def mean_dev(training_set):
 	return mean_yes, mean_no, dev_yes, dev_no, prob_yes, prob_no
 
 def naive_bayes_training(training_set):
-    trained_values = {}
-    mean_yes, mean_no, dev_yes, dev_no, prob_yes, prob_no = mean_dev(training_set)
-    for key in training_set[0]:
-    	if not key == 'DiabetesClass':
-    		trained_values[key] = bayesstats(float(mean_yes[key]), float(mean_no[key]), float(dev_yes[key]), float(dev_no[key]))
-    	else:
-    		trained_values[key] = {'prob_yes': prob_yes, 'prob_no': prob_no}
-    return trained_values
+	'''
+	Returns a dictionary with the bayesstats for each atribute of a given training set, also the probability of the classes yes and no
+	'''
+	trained_values = {}
+	mean_yes, mean_no, dev_yes, dev_no, prob_yes, prob_no = mean_dev(training_set)
+	for key in training_set[0]:
+		if not key == 'DiabetesClass':
+			trained_values[key] = bayesstats(float(mean_yes[key]), float(mean_no[key]), float(dev_yes[key]), float(dev_no[key]))
+		else:
+			trained_values[key] = {'prob_yes': prob_yes, 'prob_no': prob_no}
+	return trained_values
 
 def prob_density(new_value, mean, dev):
+	'''
+	Returns the value of a probability density of a given class given a specific argument
+	'''
 	chunk_1 = (new_value - mean) ** 2
 	chunk_2 = 2 * ((dev) ** 2)
 	chunk_3 = - (chunk_1 / chunk_2)
@@ -78,6 +93,9 @@ def prob_density(new_value, mean, dev):
 	return chunk_7
 
 def naive_bayes_testing(test, trained_values):
+	'''
+	Returns the class for a given test argument considering the trained values (means and standard deviations) 
+	'''
 	prob_yes = 1
 	prob_no = 1
 	for key in trained_values:
@@ -92,6 +110,34 @@ def naive_bayes_testing(test, trained_values):
 	else:
 		return 'no'
 
+def euclidian_distance(training_set, test):
+	'''
+	Returns a list of dictionaries with the values for the euclidian distance and class of each training argument
+	'''
+	distances = []
+	for i in range(len(training_set)):
+		distances.append({})
+		distances[i]['Distance'] = 0
+		for key in training_set[i]:
+			if not key == 'DiabetesClass':
+				distances[i]['Distance'] += (test[key] - training_set[i][key]) ** 2
+			else:
+				distances[i]['DiabetesClass'] = training_set[i]['DiabetesClass']
+		distances[i]['Distance'] = distances[i]['Distance'] ** 0.5
+	return distances
+
+
+def knn(k, training_set, test):
+	'''
+	Returns the class for a given test argument considering euclidian distances of the training arguments 
+	'''
+	distances = euclidian_distance(training_set, test)
+	distances = sorted(distances, key = lambda k: k['Distance'])
+	# print(distances)
+	if distances[k-2]['Distance'] == distances[k-1]['Distance'] or distances[k-1]['Distance'] == distances[k]['Distance']:
+		if distances[k-2]['DiabetesClass'] != distances[k-1]['DiabetesClass'] or distances[k-1]['DiabetesClass'] != distances[k]['DiabetesClass']:
+			return 'yes'
+	return distances[k - 1]['DiabetesClass']
 
 f_training = open('pima.csv','r')#later use user given address
 training_set = []
@@ -125,5 +171,21 @@ trained_values = naive_bayes_training(training_set_folded)
 # test['MassIndex'] = float(raw_test[5])
 # test['PedigreeFunction'] = float(raw_test[6])
 # test['Age'] = float(raw_test[7])
+
+countNB = 0
+countKNN = 0
+
+print('NB')
 for i in range(len(test_folded)):
-	print(naive_bayes_testing(test_folded[i], trained_values))
+	aux = naive_bayes_testing(test_folded[i], trained_values)
+	print(aux, test_folded[i]['DiabetesClass'])
+	if aux == test_folded[i]['DiabetesClass']:
+		countNB += 1
+print(countNB)
+print('KNN')
+for i in range(len(test_folded)):
+	aux = knn(1, training_set_folded, test_folded[i])
+	print(aux, test_folded[i]['DiabetesClass'])
+	if aux == test_folded[i]['DiabetesClass']:
+		countKNN += 1
+print(countKNN)
