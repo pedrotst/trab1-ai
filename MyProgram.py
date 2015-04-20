@@ -139,53 +139,111 @@ def knn(k, training_set, test):
 			return 'yes'
 	return distances[k - 1]['DiabetesClass']
 
-f_training = open('pima.csv','r')#later use user given address
-training_set = []
-i = 0
-for line in f_training:
-    line = line.split(',')
-    training_set.append({})
-    training_set[i]['TimesPregnant'] = float(line[0])
-    training_set[i]['GlucoseConcentration'] = float(line[1])
-    training_set[i]['DiastolicPressure'] = float(line[2])
-    training_set[i]['SkinThickness'] = float(line[3])
-    training_set[i]['SerumInsulin'] = float(line[4])
-    training_set[i]['MassIndex'] = float(line[5])
-    training_set[i]['PedigreeFunction'] = float(line[6])
-    training_set[i]['Age'] = float(line[7])
-    training_set[i]['DiabetesClass'] = line[8].rstrip('\n')
-    i+=1
+def dict_decode(data_row):
+	timepreg = '{},'.format(data_row['TimesPregnant'])
+	age = '{},'.format(data_row['Age'])
+	mass_ind = '{},'.format(data_row['MassIndex'])
+	insulin = '{},'.format(data_row['SerumInsulin'])
+	pedigree = '{},'.format(data_row['PedigreeFunction'])
+	diabetes = '{}\n'.format(data_row['DiabetesClass'])
+	glucose = '{},'.format(data_row['GlucoseConcentration'])
+	diastolic ='{},'.format(data_row['DiastolicPressure'])
+	skinthickness = '{},'.format(data_row['SkinThickness'])
+	return 	timepreg+glucose+diastolic+skinthickness+insulin+mass_ind+pedigree+age+diabetes
 
-training_set = sorted(training_set, key = lambda k: k['DiabetesClass'])
-test_folded, training_set_folded = folding(training_set, 0)
-trained_values = naive_bayes_training(training_set_folded)
+def create_folds_file():
+	with open('pima-folds.csv', 'w') as arq:
+		if arq:
+			for i in range(10):
+				arq.write("Fold {}\n".format(i))
+				print("\nFold {}".format(i))
+				for j in training_set[i::10]:
+					print(j)
+					arq.write(dict_decode(j))
+			arq.close()
+		else:
+			print("Couldn't open file, program exiting")
 
-# raw_test = '0.058824,0.316129,0.469388,0.26087,0.169471,0.249489,0.101196,0.033333'
-# raw_test = raw_test.split(',')
-# test = {}
-# test['TimesPregnant'] = float(raw_test[0])
-# test['GlucoseConcentration'] = float(raw_test[1])
-# test['DiastolicPressure'] = float(raw_test[2])
-# test['SkinThickness'] = float(raw_test[3])
-# test['SerumInsulin'] = float(raw_test[4])
-# test['MassIndex'] = float(raw_test[5])
-# test['PedigreeFunction'] = float(raw_test[6])
-# test['Age'] = float(raw_test[7])
+def build_set_from(file_string):
+	organized_list = []
+	for line in file_string:
+	    line = line.split(',')
+	    dict_aux = {}
+	    dict_aux['TimesPregnant'] = float(line[0])
+	    dict_aux['GlucoseConcentration'] = float(line[1])
+	    dict_aux['DiastolicPressure'] = float(line[2])
+	    dict_aux['SkinThickness'] = float(line[3])
+	    dict_aux['SerumInsulin'] = float(line[4])
+	    dict_aux['MassIndex'] = float(line[5])
+	    dict_aux['PedigreeFunction'] = float(line[6])
+	    dict_aux['Age'] = float(line[7])
+	    dict_aux['DiabetesClass'] = line[8].rstrip('\n')
+	    organized_list.append(dict_aux)
+	return organized_list
 
-countNB = 0
-countKNN = 0
 
-print('NB')
-for i in range(len(test_folded)):
-	aux = naive_bayes_testing(test_folded[i], trained_values)
-	print(aux, test_folded[i]['DiabetesClass'])
-	if aux == test_folded[i]['DiabetesClass']:
-		countNB += 1
-print(countNB)
-print('KNN')
-for i in range(len(test_folded)):
-	aux = knn(1, training_set_folded, test_folded[i])
-	print(aux, test_folded[i]['DiabetesClass'])
-	if aux == test_folded[i]['DiabetesClass']:
-		countKNN += 1
-print(countKNN)
+if __name__ == '__main__':
+		
+	# f_training = open('pima.csv','r')#later use user given address
+	# training_set = build_set_from(f_training)
+	# print(training_set)
+
+	# training_set = sorted(training_set, key = lambda k: k['DiabetesClass'])
+	# test_folded, training_set_folded = folding(training_set, 0)
+	# create_folds_file()
+
+	folds_file = open('pima-folds.csv', 'w')
+	folds_aux = []
+	folds_dict = {}
+	i = 1
+	# print(''.join(list(folds_file)).split('\n'))
+	lines = ''.join(list(folds_file)).split('\n')[1::]
+	for line in lines:
+		# print(line, i)
+		if not line == 'Fold {}'.format(i):
+			folds_aux.append(line)
+		else:
+			folds_dict[i] = build_set_from((folds_aux))
+			folds_aux = []
+			i += 1
+	# print(folds_dict[9])
+	accuracy_list = []
+	for key in folds_dict:
+		to_train = []
+		for key_ in folds_dict:
+			if not key == key_:
+				to_train = to_train + folds_dict[key]
+		# print(len(to_train))
+		trained_values = naive_bayes_training(to_train)
+		test_set = folds_dict[key]
+		count = 0
+		for i in range(len(test_set)):
+			# print("Running Baes at fold #", i)
+			test = naive_bayes_testing(test_set[i], trained_values)
+			# print(test, test_set[i]['DiabetesClass'])
+			if test == test_set[i]['DiabetesClass']:
+				count += 1
+		print("Fold {} Accuracy: {}".format(key, count/len(test_set)))
+		accuracy_list.append(count/len(test_set))
+	print("Final accuracy:", statistics.mean(accuracy_list))
+
+		# print(trained_value)
+	# trained_values = naive_bayes_training(training_set_folded)
+
+	# countNB = 0
+	# countKNN = 0
+
+	# print('NB')
+	# for i in range(len(test_folded)):
+	# 	aux = naive_bayes_testing(test_folded[i], trained_values)
+	# 	print(aux, test_folded[i]['DiabetesClass'])
+	# 	if aux == test_folded[i]['DiabetesClass']:
+	# 		countNB += 1
+	# print(countNB/len(test_folded))
+	# print('KNN')
+	# for i in range(len(test_folded)):
+	# 	aux = knn(1, training_set_folded, test_folded[i])
+	# 	# print(aux, test_folded[i]['DiabetesClass'])
+	# 	if aux == test_folded[i]['DiabetesClass']:
+	# 		countKNN += 1
+	# print(countKNN/len(test_folded))
