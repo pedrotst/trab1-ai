@@ -118,14 +118,14 @@ def euclidian_distance(training_set, test):
     Returns a list of dictionaries with the values for the euclidian distance and class of each training argument
     '''
     distances = []
-    for i in range(len(training_set)):
+    for i, train_ele in enumerate(training_set):
         distances.append({})
         distances[i]['Distance'] = 0
-        for key in training_set[i]:
+        for key in train_ele:
             if not key == 'class':
-                distances[i]['Distance'] += (test[key] - training_set[i][key]) ** 2
+                distances[i]['Distance'] += (test[key] - train_ele[key]) ** 2
             else:
-                distances[i]['class'] = training_set[i]['class']
+                distances[i]['class'] = train_ele['class']
         distances[i]['Distance'] = distances[i]['Distance'] ** 0.5
     return distances
 
@@ -149,7 +149,7 @@ def dict_decode(data_row):
     str_aux = str_aux.rstrip(',') + '\n'
     return  str_aux
 
-def create_folds_file():
+def create_folds_file(training_set):
     with open('pima-folds.csv', 'w') as arq:
         if arq:
             for i in range(10):
@@ -181,8 +181,8 @@ def build_set_from(input_set):
                 dict_aux['class'] = attr
             else:
                 dict_aux[i] = float(attr.rstrip('\n'))
-        organized_list.append(dict_aux)
-
+        if len(dict_aux.keys()) > 0:
+            organized_list.append(dict_aux)
     if is_file:
         input_set.close()
     return organized_list
@@ -207,95 +207,129 @@ def build_folds_dict():
         del folds_dict[i-1]
     return folds_dict
 
-def run_folded_bayes(folds_dict, training_set):
+def run_folded_bayes(train_set, test_set):
     missclass_no_yes = 0
     missclass_yes_no = 0
     rightclass_yes = 0
     rightclass_no = 0
     accuracy_list = []
-    for key in folds_dict:
-        to_train = []
-        for key_ in folds_dict:
-            if not key == key_:
-                to_train = to_train + folds_dict[key]
-        # print(len(to_train))
-        trained_values = naive_bayes_training(to_train)
-        test_set = folds_dict[key]
-        count = 0
-        for i in range(len(test_set)):
-            # print("Running Baes at fold #", i)
-            test = naive_bayes_testing(test_set[i], trained_values)
-            # print(test, test_set[i]['class'])
-            if test == 'no':
-                if test == test_set[i]['class']:
-                    count += 1
-                    rightclass_no += 1
-                else:
-                    missclass_no_yes += 1
+    trained_values = naive_bayes_training(train_set)
+    for item in test_set:
+        naive_class = naive_bayes_testing(item, trained_values)
+        print(naive_class)
+        if naive_class == 'no':
+            if naive_class == item['class']:
+                rightclass_no += 1
             else:
-                if test == test_set[i]['class']:
-                    count += 1
-                    rightclass_yes += 1
-                else:
-                    missclass_yes_no += 1
+                missclass_no_yes += 1
+        else:
+            if naive_class == item['class']:
+                rightclass_yes += 1
+            else:
+                missclass_yes_no += 1
+
+    # for key in folds_dict:
+    #     to_train = []
+    #     for key_ in folds_dict:
+    #         if not key == key_:
+    #             to_train = to_train + folds_dict[key]
+    #     # print(len(to_train))
+    #     trained_values = naive_bayes_training(to_train)
+    #     test_set = folds_dict[key]
+    #     count = 0
+    #     for i in range(len(test_set)):
+    #         # print("Running Baes at fold #", i)
+    #         test = naive_bayes_testing(test_set[i], trained_values)
+    #         # print(test, test_set[i]['class'])
+    #         if test == 'no':
+    #             if test == test_set[i]['class']:
+    #                 count += 1
+    #                 rightclass_no += 1
+    #             else:
+    #                 missclass_no_yes += 1
+    #         else:
+    #             if test == test_set[i]['class']:
+    #                 count += 1
+    #                 rightclass_yes += 1
+    #             else:
+    #                 missclass_yes_no += 1
 
         # print("Fold {} Accuracy: {}".format(key, count/len(test_set)))
-        accuracy_list.append(count/len(test_set))
-    print('\n ---------- NÄIVE BAYES------------------')
-    print("Final accuracy:", (rightclass_yes+rightclass_no) / (len(training_set)))
-    print("Confusion Matrix: yes   no")
-    print("Correct Class     {}    {}".format(rightclass_yes, rightclass_no))
-    print("Misclassified     {}    {}".format(missclass_yes_no, missclass_no_yes))
+        # accuracy_list.append(count/len(test_set))
+    # total_tests = rightclass_yes + rightclass_no + missclass_no_yes + missclass_yes_no
+    # print('\n ---------- NÄIVE BAYES------------------')
+    # print("Final accuracy:", (rightclass_yes+rightclass_no) / total_tests)
+    # print("Confusion Matrix: yes   no")
+    # print("Correct Class     {}    {}".format(rightclass_yes, rightclass_no))
+    # print("Misclassified     {}    {}".format(missclass_yes_no, missclass_no_yes))
 
-def run_knn(k, folds_dict, training_set):
+def run_knn(k, train_set, test_set):
     countKNN = 0
     missclass_no_yes = 0
     missclass_yes_no = 0
     rightclass_yes = 0
     rightclass_no = 0
-    for key in folds_dict:
-        to_train = []
-        for key_ in folds_dict:
-            if key_ != key:
-                to_train = to_train + folds_dict[key_]
-        for line in folds_dict[key]:
-            aux = knn(k, to_train, line)
-            if aux == "no":
-                if aux == line['class']:
-                    countKNN += 1   
-                    rightclass_no += 1
-                else:
-                    missclass_no_yes += 1
-            if aux == "yes":
-                if aux == line['class']:
-                    countKNN += 1
-                    rightclass_yes += 1
-                else:
-                    missclass_yes_no += 1
-    print("\n ------------------ {}NN -------------------".format(k))
-    print("Final Accuracy: {}".format(countKNN/len(training_set)))
-    print("Confusion Matrix: yes    no")
-    print("Correct Class     {}    {}".format(rightclass_yes, rightclass_no))
-    print("Misclassified     {}    {}".format(missclass_yes_no, missclass_no_yes))
+
+    for item in test_set:
+        knn_class = knn(k, train_set, item)
+        print(knn_class)
+        if knn_class == 'no':
+            if item['class'] == 'no':
+                rightclass_no += 1
+            else:
+                missclass_no_yes += 1
+        else:
+            if item['class'] == 'yes':
+                rightclass_yes += 1
+            else:
+                missclass_yes_no += 1
+
+
+    # for key in folds_dict:
+    #     to_train = []
+    #     for key_ in folds_dict:
+    #         if key_ != key:
+    #             to_train = to_train + folds_dict[key_]
+    #     for line in folds_dict[key]:
+    #         aux = knn(k, to_train, line)
+    #         if aux == "no":
+    #             if aux == line['class']:
+    #                 countKNN += 1   
+    #                 rightclass_no += 1
+    #             else:
+    #                 missclass_no_yes += 1
+    #         if aux == "yes":
+    #             if aux == line['class']:
+    #                 countKNN += 1
+    #                 rightclass_yes += 1
+    #             else:
+    #                 missclass_yes_no += 1
+    # total_tests = rightclass_yes + rightclass_no + missclass_no_yes + missclass_yes_no
+    # print("\n ------------------ {}NN -------------------".format(k))
+    # print("Final Accuracy: {}".format(countKNN/total_tests))
+    # print("Confusion Matrix: yes    no")
+    # print("Correct Class     {}    {}".format(rightclass_yes, rightclass_no))
+    # print("Misclassified     {}    {}".format(missclass_yes_no, missclass_no_yes))
 
                 
 if __name__ == '__main__':
-    print("Number of arguments:", len(sys.argv))
-    print("Arguments", sys.argv[3])
+    # print("Number of arguments:", len(sys.argv))
+    # print("Arguments", sys.argv[3])
 
-    file_name = sys.argv[1]
-    training_set = build_set_from(file_name)
-    
-
+    train_file = sys.argv[1]
+    training_set = build_set_from(train_file)
+    test_file = sys.argv[2]
+    test_set = build_set_from(test_file)
+    # print(training_set[])
     training_set = sorted(training_set, key = lambda k: k['class'])
     
-    create_folds_file()
-    folds_dict = build_folds_dict()
+    # create_folds_file(training_set)
+    # folds_dict = build_folds_dict()
 
     if(sys.argv[3].endswith('NN')):
         k = re.findall('\d+', sys.argv[3])
         k = int(k[0])
-        run_knn(k, folds_dict, training_set)
+        run_knn(k, training_set, test_set)
 
     if sys.argv[3] == 'NB':
-        run_folded_bayes(folds_dict, training_set)
+        run_folded_bayes(training_set, test_set)
