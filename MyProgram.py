@@ -1,6 +1,8 @@
 from pprint import pprint
 import statistics
 import math
+import sys
+import re
 
 class bayesstats():
     '''
@@ -152,9 +154,7 @@ def create_folds_file():
         if arq:
             for i in range(10):
                 arq.write("Fold{}\n".format(i))
-                print("\nFold {}".format(i))
                 for j in training_set[i::10]:
-                    print(j)
                     arq.write(dict_decode(j))
                 arq.write("\n")
             arq.close()
@@ -206,20 +206,8 @@ def build_folds_dict():
         folds_file.close()
         del folds_dict[i-1]
     return folds_dict
-                
-if __name__ == '__main__':
-        
-    file_name = 'pima-CSF.csv'#later use user given address
-    training_set = build_set_from(file_name)
-    
 
-    training_set = sorted(training_set, key = lambda k: k['class'])
-    print(dict_decode(training_set[1]))
-    
-    # create_folds_file()
-    folds_dict = build_folds_dict()
-
-    
+def run_folded_bayes(folds_dict, training_set):
     missclass_no_yes = 0
     missclass_yes_no = 0
     rightclass_yes = 0
@@ -251,31 +239,15 @@ if __name__ == '__main__':
                 else:
                     missclass_yes_no += 1
 
-        print("Fold {} Accuracy: {}".format(key, count/len(test_set)))
+        # print("Fold {} Accuracy: {}".format(key, count/len(test_set)))
         accuracy_list.append(count/len(test_set))
-    print("Final accuracy:", statistics.mean(accuracy_list))
+    print('\n ---------- NÄIVE BAYES------------------')
+    print("Final accuracy:", (rightclass_yes+rightclass_no) / (len(training_set)))
     print("Confusion Matrix: yes   no")
     print("Correct Class     {}    {}".format(rightclass_yes, rightclass_no))
     print("Misclassified     {}    {}".format(missclass_yes_no, missclass_no_yes))
-        # print(trained_value)
-    # trained_values = naive_bayes_training(training_set_folded)
 
-    # countNB = 0
-    # countKNN = 0
-
-    # print('NB')
-    # for i in range(len(test_folded)):
-    #   aux = naive_bayes_testing(test_folded[i], trained_values)
-    #   print(aux, test_folded[i]['class'])
-    #   if aux == test_folded[i]['class']:
-    #       countNB += 1
-    # print(countNB/len(test_folded))
-    # print('KNN')
-    # for i in range(len(test_folded)):
-    #   aux = knn(1, training_set_folded, test_folded[i])
-    #   # print(aux, test_folded[i]['class'])
-    #   if aux == test_folded[i]['class']:
-    #       countKNN += 1
+def run_knn(k, folds_dict, training_set):
     countKNN = 0
     missclass_no_yes = 0
     missclass_yes_no = 0
@@ -287,7 +259,7 @@ if __name__ == '__main__':
             if key_ != key:
                 to_train = to_train + folds_dict[key_]
         for line in folds_dict[key]:
-            aux = knn(1, to_train, line)
+            aux = knn(k, to_train, line)
             if aux == "no":
                 if aux == line['class']:
                     countKNN += 1   
@@ -300,8 +272,30 @@ if __name__ == '__main__':
                     rightclass_yes += 1
                 else:
                     missclass_yes_no += 1
-
-    print("KNN final Accuracy: {}".format(countKNN/len(training_set)))
+    print("\n ------------------ {}NN -------------------".format(k))
+    print("Final Accuracy: {}".format(countKNN/len(training_set)))
     print("Confusion Matrix: yes    no")
     print("Correct Class     {}    {}".format(rightclass_yes, rightclass_no))
     print("Misclassified     {}    {}".format(missclass_yes_no, missclass_no_yes))
+
+                
+if __name__ == '__main__':
+    print("Number of arguments:", len(sys.argv))
+    print("Arguments", sys.argv[3])
+
+    file_name = sys.argv[1]
+    training_set = build_set_from(file_name)
+    
+
+    training_set = sorted(training_set, key = lambda k: k['class'])
+    
+    create_folds_file()
+    folds_dict = build_folds_dict()
+
+    if(sys.argv[3].endswith('NN')):
+        k = re.findall('\d+', sys.argv[3])
+        k = int(k[0])
+        run_knn(k, folds_dict, training_set)
+
+    if sys.argv[3] == 'NB':
+        run_folded_bayes(folds_dict, training_set)
