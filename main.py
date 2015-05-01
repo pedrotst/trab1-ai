@@ -155,14 +155,15 @@ def create_folds_file():
 	with open('pima-folds.csv', 'w') as arq:
 		if arq:
 			for i in range(10):
-				arq.write("Fold {}\n".format(i))
+				arq.write("Fold{}\n".format(i))
 				print("\nFold {}".format(i))
 				for j in training_set[i::10]:
 					print(j)
 					arq.write(dict_decode(j))
+				arq.write("\n")
 			arq.close()
 		else:
-			print("Couldn't open file, program exiting")
+			raise FileException("Couldn't open file, program exiting")
 
 def build_set_from(file_string):
 	organized_list = []
@@ -181,32 +182,44 @@ def build_set_from(file_string):
 	    organized_list.append(dict_aux)
 	return organized_list
 
-
+def build_folds_dict():
+	with open('pima-folds.csv', 'r') as folds_file:
+		if not folds_file:
+			raise FileException("Could not open pima-folds, program exiting!")
+		folds_aux = []
+		folds_dict = {}
+		i = 1
+		lines = ''.join(list(folds_file)).split('\n')[1::]
+		for line in lines:
+			# print(line, i)
+			if line == '':
+				folds_dict[i] = build_set_from(folds_aux)
+				folds_aux = []
+				i += 1
+			elif not line.startswith('Fold'):
+				folds_aux.append(line)
+		folds_file.close()
+		del folds_dict[i-1]
+	return folds_dict
+				
 if __name__ == '__main__':
 		
-	# f_training = open('pima.csv','r')#later use user given address
-	# training_set = build_set_from(f_training)
+	f_training = open('pima.csv','r')#later use user given address
+	training_set = build_set_from(f_training)
 	# print(training_set)
 
-	# training_set = sorted(training_set, key = lambda k: k['DiabetesClass'])
+	training_set = sorted(training_set, key = lambda k: k['DiabetesClass'])
 	# test_folded, training_set_folded = folding(training_set, 0)
 	# create_folds_file()
 
-	folds_file = open('pima-folds.csv', 'w')
-	folds_aux = []
-	folds_dict = {}
-	i = 1
-	# print(''.join(list(folds_file)).split('\n'))
-	lines = ''.join(list(folds_file)).split('\n')[1::]
-	for line in lines:
-		# print(line, i)
-		if not line == 'Fold {}'.format(i):
-			folds_aux.append(line)
-		else:
-			folds_dict[i] = build_set_from((folds_aux))
-			folds_aux = []
-			i += 1
-	# print(folds_dict[9])
+	folds_dict = build_folds_dict()
+
+	# for i in folds_dict:
+	# 	print(folds_dict[i])
+	missclass_no_yes = 0
+	missclass_yes_no = 0
+	rightclass_yes = 0
+	rightclass_no = 0
 	accuracy_list = []
 	for key in folds_dict:
 		to_train = []
@@ -221,12 +234,25 @@ if __name__ == '__main__':
 			# print("Running Baes at fold #", i)
 			test = naive_bayes_testing(test_set[i], trained_values)
 			# print(test, test_set[i]['DiabetesClass'])
-			if test == test_set[i]['DiabetesClass']:
-				count += 1
+			if test == 'no':
+				if test == test_set[i]['DiabetesClass']:
+					count += 1
+					rightclass_no += 1
+				else:
+					missclass_no_yes += 1
+			else:
+				if test == test_set[i]['DiabetesClass']:
+					count += 1
+					rightclass_yes += 1
+				else:
+					missclass_yes_no += 1
+
 		print("Fold {} Accuracy: {}".format(key, count/len(test_set)))
 		accuracy_list.append(count/len(test_set))
 	print("Final accuracy:", statistics.mean(accuracy_list))
-
+	print("Confusion Matrix: yes   no")
+	print("Correct Class     {}    {}".format(rightclass_yes, rightclass_no))
+	print("Misclassified     {}    {}".format(missclass_yes_no, missclass_no_yes))
 		# print(trained_value)
 	# trained_values = naive_bayes_training(training_set_folded)
 
@@ -246,4 +272,32 @@ if __name__ == '__main__':
 	# 	# print(aux, test_folded[i]['DiabetesClass'])
 	# 	if aux == test_folded[i]['DiabetesClass']:
 	# 		countKNN += 1
-	# print(countKNN/len(test_folded))
+	countKNN = 0
+	missclass_no_yes = 0
+	missclass_yes_no = 0
+	rightclass_yes = 0
+	rightclass_no = 0
+	for key in folds_dict:
+		to_train = []
+		for key_ in folds_dict:
+			if key_ != key:
+				to_train = to_train + folds_dict[key_]
+		for line in folds_dict[key]:
+			aux = knn(1, to_train, line)
+			if aux == "no":
+				if aux == line['DiabetesClass']:
+					countKNN += 1	
+					rightclass_no += 1
+				else:
+					missclass_no_yes += 1
+			if aux == "yes":
+				if aux == line['DiabetesClass']:
+					countKNN += 1
+					rightclass_yes += 1
+				else:
+					missclass_yes_no += 1
+
+	print("KNN final Accuracy: {}".format(countKNN/len(training_set)))
+	print("Confusion Matrix: yes    no")
+	print("Correct Class     {}    {}".format(rightclass_yes, rightclass_no))
+	print("Misclassified     {}    {}".format(missclass_yes_no, missclass_no_yes))
