@@ -1,4 +1,3 @@
-from __future__ import print_function
 from __future__ import division
 from __future__ import with_statement
 import math
@@ -42,6 +41,14 @@ def folding(training_set, fold_num):
             training_set_folded.append(training_set[i])
     return test_folded, training_set_folded
 
+def mean(data_list):
+    return sum(data_list) / len(data_list)
+
+def stdev(data_list):
+    data_mean = mean(data_list)
+    variance = sum([(x - data_mean) ** 2 for x in data_list]) / (len(data_list) - 1)
+    return math.sqrt(variance)
+
 def mean_dev(training_set):
     '''
     Calculates and returns the mean and standard deviation to the classes yes and no of a given training set
@@ -59,10 +66,10 @@ def mean_dev(training_set):
             else:
                 class_no.append(training_set[i][key])
         if not key == 'class':
-            mean_yes[key] = statistics.mean(class_yes)
-            mean_no[key] = statistics.mean(class_no)
-            dev_yes[key] = statistics.stdev(class_yes)
-            dev_no[key] = statistics.stdev(class_no)
+            mean_yes[key] = mean(class_yes)
+            mean_no[key] = mean(class_no)
+            dev_yes[key] = stdev(class_yes)
+            dev_no[key] = stdev(class_no)
         else:
             prob_yes = float(len(class_yes) / len(training_set))
             prob_no = float(len(class_no) / len(training_set))
@@ -177,8 +184,8 @@ def build_set_from(input_set):
         line = line.split(',')
         dict_aux = {}
         for i, attr in enumerate(line):
-            attr = attr.rstrip('\n')
-            if attr in ['no', 'yes']:
+            attr = attr.strip()
+            if attr == 'no' or attr == 'yes':
                 dict_aux['class'] = attr
             else:
                 dict_aux[i] = float(attr)
@@ -209,26 +216,13 @@ def build_folds_dict():
     return folds_dict
 
 def run_folded_bayes(train_set, test_set):
-    missclass_no_yes = 0
-    missclass_yes_no = 0
-    rightclass_yes = 0
-    rightclass_no = 0
-    accuracy_list = []
+    nb_l = []
     trained_values = naive_bayes_training(train_set)
     for item in test_set:
         naive_class = naive_bayes_testing(item, trained_values)
+        nb_l += str(naive_class)
         print(naive_class)
-        if naive_class == 'no':
-            if naive_class == item['class']:
-                rightclass_no += 1
-            else:
-                missclass_no_yes += 1
-        else:
-            if naive_class == item['class']:
-                rightclass_yes += 1
-            else:
-                missclass_yes_no += 1
-
+    # print '\n'.join(nb_l)
     # for key in folds_dict:
     #     to_train = []
     #     for key_ in folds_dict:
@@ -258,32 +252,20 @@ def run_folded_bayes(train_set, test_set):
         # print("Fold {} Accuracy: {}".format(key, count/len(test_set)))
         # accuracy_list.append(count/len(test_set))
     # total_tests = rightclass_yes + rightclass_no + missclass_no_yes + missclass_yes_no
-    # print('\n ---------- NÄIVE BAYES------------------')
+    # print('\n ---------- NAIVE BAYES------------------')
     # print("Final accuracy:", (rightclass_yes+rightclass_no) / total_tests)
     # print("Confusion Matrix: yes   no")
     # print("Correct Class     {}    {}".format(rightclass_yes, rightclass_no))
     # print("Misclassified     {}    {}".format(missclass_yes_no, missclass_no_yes))
 
 def run_knn(k, train_set, test_set):
-    countKNN = 0
-    missclass_no_yes = 0
-    missclass_yes_no = 0
-    rightclass_yes = 0
-    rightclass_no = 0
+    knn_l = []
+
 
     for item in test_set:
         knn_class = knn(k, train_set, item)
-        print(knn_class)
-        if knn_class == 'no':
-            if item['class'] == 'no':
-                rightclass_no += 1
-            else:
-                missclass_no_yes += 1
-        else:
-            if item['class'] == 'yes':
-                rightclass_yes += 1
-            else:
-                missclass_yes_no += 1
+        knn_l += knn_class
+    print '\n'.join(knn_l)
 
 
     # for key in folds_dict:
@@ -321,16 +303,18 @@ if __name__ == '__main__':
     training_set = build_set_from(train_file)
     test_file = sys.argv[2]
     test_set = build_set_from(test_file)
-    # print(training_set[])
+    for i in training_set:
+        print(i['class'])
+    # print(training_set[500])
     training_set = sorted(training_set, key = lambda k: k['class'])
     
-    create_folds_file(training_set)
+    # create_folds_file(training_set)
     # folds_dict = build_folds_dict()
 
     if(sys.argv[3].endswith('NN')):
         k = re.findall('\d+', sys.argv[3])
         k = int(k[0])
-        run_knn(k, training_set, test_set)
+        # run_knn(k, training_set, test_set)
 
     if sys.argv[3] == 'NB':
         run_folded_bayes(training_set, test_set)
