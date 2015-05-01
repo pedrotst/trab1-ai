@@ -1,5 +1,6 @@
-from pprint import pprint
-import statistics
+from __future__ import print_function
+from __future__ import division
+from __future__ import with_statement
 import math
 import sys
 import re
@@ -153,7 +154,7 @@ def create_folds_file(training_set):
     with open('pima-folds.csv', 'w') as arq:
         if arq:
             for i in range(10):
-                arq.write("Fold{}\n".format(i))
+                arq.write("Fold{}\n".format(i+1))
                 for j in training_set[i::10]:
                     arq.write(dict_decode(j))
                 arq.write("\n")
@@ -180,7 +181,7 @@ def build_set_from(input_set):
             if attr in ['no', 'yes']:
                 dict_aux['class'] = attr
             else:
-                dict_aux[i] = float(attr.rstrip('\n'))
+                dict_aux[i] = float(attr)
         if len(dict_aux.keys()) > 0:
             organized_list.append(dict_aux)
     if is_file:
@@ -323,7 +324,7 @@ if __name__ == '__main__':
     # print(training_set[])
     training_set = sorted(training_set, key = lambda k: k['class'])
     
-    # create_folds_file(training_set)
+    create_folds_file(training_set)
     # folds_dict = build_folds_dict()
 
     if(sys.argv[3].endswith('NN')):
