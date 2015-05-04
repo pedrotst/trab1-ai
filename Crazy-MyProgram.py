@@ -168,6 +168,7 @@ def new_euclidian_distance(training_set, test):
                 aux += (test[key] - train_ele[key]) ** 2
         aux = aux ** 0.5
         if distance > aux:
+            distance = aux
             resp = train_ele['class']
         if distance == aux:
             if resp != train_ele['class']:
