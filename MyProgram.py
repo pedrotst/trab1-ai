@@ -143,7 +143,7 @@ def knn(k, training_set, test):
     Returns the class for a given test argument considering euclidian distances of the training arguments 
     '''
     distances = euclidian_distance(training_set, test)
-    distances = sorted(distances, key = lambda k: k['Distance'])
+    distances = sorted(distances, key = lambda l: l['Distance'])
     # print(distances)
     if distances[k-2]['Distance'] == distances[k-1]['Distance'] or distances[k-1]['Distance'] == distances[k]['Distance']:
         if distances[k-2]['class'] != distances[k-1]['class'] or distances[k-1]['class'] != distances[k]['class']:
@@ -176,7 +176,7 @@ def build_set_from(input_set):
       integers as keys, the last keynum i.e. the class key num
     '''
     is_file = False
-    if type(input_set) is not list:
+    if (type(input_set) is not list) or (type(input_set) is not str):
         input_set = open(input_set, 'r')
         is_file = True
     organized_list = []
@@ -220,8 +220,8 @@ def run_folded_bayes(train_set, test_set):
     trained_values = naive_bayes_training(train_set)
     for item in test_set:
         naive_class = naive_bayes_testing(item, trained_values)
-        nb_l += str(naive_class)
-        print(naive_class)
+        nb_l += [(naive_class)]
+    return(nb_l)
     # print '\n'.join(nb_l)
     # for key in folds_dict:
     #     to_train = []
@@ -264,9 +264,8 @@ def run_knn(k, train_set, test_set):
 
     for item in test_set:
         knn_class = knn(k, train_set, item)
-        knn_l += knn_class
-    print '\n'.join(knn_l)
-
+        knn_l += [knn_class]
+    return knn_l
 
     # for key in folds_dict:
     #     to_train = []
@@ -303,8 +302,6 @@ if __name__ == '__main__':
     training_set = build_set_from(train_file)
     test_file = sys.argv[2]
     test_set = build_set_from(test_file)
-    for i in training_set:
-        print(i['class'])
     # print(training_set[500])
     training_set = sorted(training_set, key = lambda k: k['class'])
     
@@ -314,7 +311,10 @@ if __name__ == '__main__':
     if(sys.argv[3].endswith('NN')):
         k = re.findall('\d+', sys.argv[3])
         k = int(k[0])
-        # run_knn(k, training_set, test_set)
+        tested_set = run_knn(k, training_set, test_set)
 
     if sys.argv[3] == 'NB':
-        run_folded_bayes(training_set, test_set)
+        tested_set = run_folded_bayes(training_set, test_set)
+
+    for i in tested_set:
+        print i
