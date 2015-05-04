@@ -145,9 +145,10 @@ def knn(k, training_set, test):
     distances = euclidian_distance(training_set, test)
     distances = sorted(distances, key = lambda l: l['Distance'])
     # print(distances)
-    if distances[k-2]['Distance'] == distances[k-1]['Distance'] or distances[k-1]['Distance'] == distances[k]['Distance']:
-        if distances[k-2]['class'] != distances[k-1]['class'] or distances[k-1]['class'] != distances[k]['class']:
-            return 'yes'
+    if k > 1:
+        if distances[k-2]['Distance'] == distances[k-1]['Distance'] or distances[k-1]['Distance'] == distances[k]['Distance']:
+            if distances[k-2]['class'] != distances[k-1]['class'] or distances[k-1]['class'] != distances[k]['class']:
+                return 'yes'
     return distances[k - 1]['class']
 
 def dict_decode(data_row):
