@@ -149,6 +149,9 @@ def knn(k, training_set, test):
         if distances[k-2]['Distance'] == distances[k-1]['Distance']:
             if distances[k-2]['class'] != distances[k-1]['class']:
                 return 'yes'
+    if distances[k-1]['Distance'] == distances[k]['Distance']:
+        if distances[k-1]['class'] != distances[k]['class']:
+            return 'yes'
     return distances[k - 1]['class']
 
 def dict_decode(data_row):
